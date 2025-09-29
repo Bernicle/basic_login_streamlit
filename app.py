@@ -2,13 +2,12 @@ import streamlit as st
 import os
 
 # Import modules from the production-grade /src structure
-# NOTE: These modules must exist in src/service/ and src/gui/ to run.
 from src.service.db_manager import init_db
-from src.service.auth_service import logout
+# 🚨 IMPORT: Get the new cookie-aware functions
+from src.service.auth_service import logout, check_cookie_authentication 
 from src.gui.pages import render_login_form, render_dashboard_page, render_settings_page
 
 # --- Configuration ---
-# Define available pages for navigation
 PAGES = {
     "Dashboard": render_dashboard_page,
     "Settings": render_settings_page,
@@ -19,8 +18,6 @@ PAGES = {
 @st.cache_resource(show_spinner="Initializing Database...")
 def setup_application():
     """Initializes the database and ensures tables/default users exist."""
-    # This function is run once and ensures the 'app_users.db' file and 
-    # the default 'admin' user are created securely.
     init_db()
     st.session_state['initialized'] = True
     print("Application setup complete.")
@@ -36,26 +33,33 @@ def main():
         layout="wide"
     )
 
-    # Initialize session state variables if they don't exist
-    if 'authenticated' not in st.session_state:
-        # Default state: user is not logged in
-        st.session_state['authenticated'] = False
-        st.session_state['current_page'] = "Dashboard" # Default page after login
+    # 🚨 CRITICAL FIX FOR PERSISTENCE: 
+    # Check the cookie immediately on every run. If a valid token is found,
+    # it restores the st.session_state['authenticated'] = True, keeping the user logged in.
+    check_cookie_authentication() 
 
+    # --- SESSION STATE INITIALIZATION (Defaulting) ---
+    # Ensure all required state variables are initialized. If check_cookie_authentication 
+    # restored the state, these checks will pass without resetting the values.
+    if 'authenticated' not in st.session_state:
+        st.session_state['authenticated'] = False
+    if 'current_page' not in st.session_state:
+        st.session_state['current_page'] = "Dashboard" 
+    if 'name' not in st.session_state:
+        st.session_state['name'] = 'N/A'
+    
+    
     if st.session_state['authenticated']:
-        # === PROTECTED VIEW: Display navigation and content ===
+        # === PROTECTED VIEW ===
 
         # 1. Sidebar Navigation and Logout
         with st.sidebar:
             st.title("Application Menu")
-            # Display authenticated user's name
-            st.subheader(f"User: {st.session_state.get('name', 'N/A')}") 
+            st.subheader(f"User: {st.session_state.get('name')}") 
             
-            # Navigation Radio Button
             page_selection = st.radio(
                 "Navigate",
                 list(PAGES.keys()),
-                # Use key and current_page state for sticky navigation selection
                 index=list(PAGES.keys()).index(st.session_state['current_page']),
                 key="page_selector"
             )
@@ -63,13 +67,13 @@ def main():
 
             st.markdown("---")
             if st.button("Logout", type="secondary"):
-                logout() # Calls the service function to clear state and rerun
+                logout()
 
-        # 2. Render Current Page Content using the routing dictionary
+        # 2. Render Current Page Content
         PAGES[st.session_state['current_page']]()
 
     else:
-        # === PUBLIC VIEW: Display the Login Form ===
+        # === PUBLIC VIEW (Login) ===
         render_login_form()
 
 if __name__ == '__main__':

@@ -19,6 +19,7 @@ class User(Base):
     # Hashed password storage is crucial for security
     hashed_password = Column(String, nullable=False)
     name = Column(String)
+    session_token = Column(String, nullable=True, index=True, default=None) 
 
     def __repr__(self):
         return f"<User(username='{self.username}', name='{self.name}')>"
@@ -70,6 +71,34 @@ def get_user_by_username(username: str) -> Optional[User]:
     finally:
         session.close()
 
+def get_user_by_token(token: str) -> Optional[User]:
+    """Retrieves a user by a secure session token."""
+    session = SessionLocal()
+    try:
+        # Secure server-side check: token must match
+        user = session.query(User).filter(User.session_token == token).first()
+        return user
+    finally:
+        session.close()
+
+
+def set_user_session_token(user_id: int, token: Optional[str]) -> bool:
+    """Updates a user's session token in the database (or clears it if token is None)."""
+    session = SessionLocal()
+    try:
+        user = session.query(User).filter(User.id == user_id).first()
+        if user:
+            user.session_token = token
+            session.commit()
+            return True
+        return False
+    except Exception as e:
+        print(f"ERROR setting session token: {e}")
+        session.rollback()
+        return False
+    finally:
+        session.close()
+        
 def add_user(username: str, password: str, name: str) -> bool:
     """Adds a new user to the database (structure defined for future signup)."""
     session = SessionLocal()

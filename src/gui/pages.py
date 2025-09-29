@@ -1,52 +1,76 @@
 import streamlit as st
-from src.service.auth_service import authenticate_user, logout
-
-# --- Dashboard & Protected Pages ---
-
-def render_dashboard_page():
-    """Renders the main protected dashboard content."""
-    st.title("Main Data Dashboard 📈")
-    st.header(f"Welcome back, {st.session_state.get('name', 'User')}!")
-    st.success("You are securely logged in.")
-    
-    st.markdown("---")
-    st.subheader("Data Overview")
-    st.write("This is a production-grade secured dashboard.")
-    
-    col1, col2, col3 = st.columns(3)
-    col1.metric("KPI 1 (Today)", "4,500", "+12%")
-    col2.metric("KPI 2 (Active Users)", "12", "-5")
-    col3.metric("DB Status", "Connected", "OK")
-
-def render_settings_page():
-    """Renders the protected settings page."""
-    st.title("⚙️ Application Settings")
-    st.subheader(f"User ID: {st.session_state.get('user_id')}")
-    st.info("Here you can configure application parameters.")
-    
-    st.text_input("Application Name", "Flood Monitor v1.0")
-    st.slider("Refresh Rate (seconds)", 1, 60, 10)
-    st.button("Save Configuration", type="primary")
+from src.service.auth_service import authenticate_user
 
 # --- Login Component ---
 
 def render_login_form():
-    """Renders the login form in the main content area."""
-    st.title("Secure Application Login")
-    st.subheader("Please sign in to continue")
+    """Displays the login form."""
+    col1, col2, col3 = st.columns([1, 2, 1])
 
-    with st.form("login_form"):
-        username = st.text_input("Username")
-        password = st.text_input("Password", type="password")
-        submitted = st.form_submit_button("Login", type="primary")
+    with col2:
+        st.title("Secure Application Login")
+        st.markdown("---")
+        
+        with st.form("login_form"):
+            username = st.text_input("Username")
+            password = st.text_input("Password", type="password")
+            submitted = st.form_submit_button("Login", type="primary")
 
-        if submitted:
-            # Call the central authentication service
-            if authenticate_user(username, password):
-                st.success("Login successful! Redirecting...")
-                st.rerun()
-            else:
-                st.error("Invalid Username or Password.")
+            if submitted:
+                # authenticate_user now handles token generation, saving to DB, and setting the cookie
+                if authenticate_user(username, password):
+                    st.success(f"Welcome, {st.session_state.get('name')}! Redirecting...")
+                    st.rerun()
+                else:
+                    st.error("Invalid Username or Password.")
+                    
+        st.markdown(
+            """
+            <div style="margin-top: 20px;">
+                <p><strong>Test Credentials:</strong></p>
+                <p>Username: <code>admin</code></p>
+                <p>Password: <code>safe_pass</code></p>
+            </div>
+            """, 
+            unsafe_allow_html=True
+        )
+
+# --- Protected Pages ---
+
+def render_dashboard_page():
+    """Displays the main protected dashboard content."""
+    st.title("📊 Main Dashboard")
+    st.markdown("### Secure Data Overview")
     
-    st.markdown("---")
-    st.caption("Demo Account: admin / safe_pass")
+    st.success(
+        f"This content is protected. User: {st.session_state.get('name')} "
+        f"({st.session_state.get('username')})"
+    )
+    
+    st.info(
+        "**Persistence Check:** Refresh your browser (F5 or Ctrl+R). "
+        "The session should be restored automatically via the secure cookie."
+    )
+    
+    st.markdown("""
+        <div style="background-color: #f0f2f6; padding: 15px; border-radius: 10px;">
+        #### Data Visualizations
+        - **Metric 1:** System Uptime 99.9%
+        - **Metric 2:** Active Users 42
+        - **Chart:** (Placeholder for actual charts)
+        </div>
+    """, unsafe_allow_html=True)
+
+
+def render_settings_page():
+    """Displays the protected user settings page."""
+    st.title("⚙️ Account Settings")
+    st.markdown("### Manage User Preferences")
+    
+    st.warning("Feature under development. This page demonstrates routing for authenticated users.")
+    
+    st.json({
+        "User_ID": st.session_state.get("user_id"),
+        "Account_Type": "Admin (Placeholder)",
+        "Last_Login_Token": "Verified via secure cookie"
+    })
