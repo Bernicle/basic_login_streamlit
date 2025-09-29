@@ -28,3 +28,10 @@ def setup_application():
 # Ensure DB is initialized before anything else runs
 setup_application()
 
+# --- Application Main Flow ---
+
+def main():
+    pass
+
+if __name__ == '__main__':
+    main()
