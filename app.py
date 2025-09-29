@@ -31,7 +31,46 @@ setup_application()
 # --- Application Main Flow ---
 
 def main():
-    pass
+    st.set_page_config(
+        page_title="Production-Grade Streamlit App",
+        layout="wide"
+    )
+
+    # Initialize session state variables if they don't exist
+    if 'authenticated' not in st.session_state:
+        # Default state: user is not logged in
+        st.session_state['authenticated'] = False
+        st.session_state['current_page'] = "Dashboard" # Default page after login
+
+    if st.session_state['authenticated']:
+        # === PROTECTED VIEW: Display navigation and content ===
+
+        # 1. Sidebar Navigation and Logout
+        with st.sidebar:
+            st.title("Application Menu")
+            # Display authenticated user's name
+            st.subheader(f"User: {st.session_state.get('name', 'N/A')}") 
+            
+            # Navigation Radio Button
+            page_selection = st.radio(
+                "Navigate",
+                list(PAGES.keys()),
+                # Use key and current_page state for sticky navigation selection
+                index=list(PAGES.keys()).index(st.session_state['current_page']),
+                key="page_selector"
+            )
+            st.session_state['current_page'] = page_selection
+
+            st.markdown("---")
+            if st.button("Logout", type="secondary"):
+                logout() # Calls the service function to clear state and rerun
+
+        # 2. Render Current Page Content using the routing dictionary
+        PAGES[st.session_state['current_page']]()
+
+    else:
+        # === PUBLIC VIEW: Display the Login Form ===
+        render_login_form()
 
 if __name__ == '__main__':
     main()
